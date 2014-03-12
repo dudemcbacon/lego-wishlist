@@ -1,11 +1,14 @@
 require 'mechanize'
 require 'highline/import'
 require 'pp'
+require 'pry'
 
 BRICKOWL_URL = "http://www.brickowl.com/"
 
 a = Mechanize.new
+a.user_agent = 'iPad'
 
+# Login to account
 a.get(BRICKOWL_URL) do |page|
 
   # Goto Login Page
@@ -20,18 +23,51 @@ a.get(BRICKOWL_URL) do |page|
     f.pass = password
   end.submit
 
+  # Verify login was successful
   if my_page.link_with(:href => 'https://www.brickowl.com/user').nil?
     die('Login failure.')
   end
 
 end
 
+
+# Create wishlist
+a.get(BRICKOWL_URL + 'wishlist/add') do |page|
+
+  name = ask("Enter new wishlist name:   ") { |q| q.echo = true }
+
+  page.form.field_with(:name => 'name').value = name
+  submission = page.form.submit
+  
+  if !submission.at('.error').nil?
+    puts("Wishlist already exists. Exiting...")
+    exit
+  end
+  
+end
+
+# Get Wishlists
+a.get(BRICKOWL_URL + 'wishlist') do |page|
+    
+  wishlists = page.at('tbody').element_children
+    
+  puts("Found #{wishlists.length} wishlists...")
+    
+  wishlists.each_with_index do |wishlist, index|
+    name = wishlist.element_children[0].text
+    puts("#{index+1}: #{name}") 
+  end
+end   
+
+# Get a brick from query
 item = ask("Enter an item number:  ") { |q| q.echo = true }.to_i
 
 if item == 0
   die("Please enter an integer item number.")
 end
+  
 
+queried_brick = ""
 a.get(BRICKOWL_URL + 'search/catalog?query=' + item.to_s) do |page|
   
   quantity = page.at('.amount').text.gsub("\n", "").split(" Item")[0]
@@ -63,9 +99,18 @@ a.get(BRICKOWL_URL + 'search/catalog?query=' + item.to_s) do |page|
     queried_brick = bricks[selection]  
   else
     queried_brick = bricks[0]
+  end
+  
+  puts queried_brick
+  
+  # Add to wishl 
 end
-puts queried_brick
-   
+
+# Add to wishlist
+a.get(queried_brick['href']) do |page|
+
+  PP.pp(page)
+
 end
 
 

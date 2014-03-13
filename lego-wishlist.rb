@@ -32,11 +32,12 @@ end
 
 
 # Create wishlist
+wishlist_name = ""
 a.get(BRICKOWL_URL + 'wishlist/add') do |page|
 
-  name = ask("Enter new wishlist name:   ") { |q| q.echo = true }
+  wishlist_name = ask("Enter new wishlist name:   ") { |q| q.echo = true }
 
-  page.form.field_with(:name => 'name').value = name
+  page.form.field_with(:name => 'name').value = wishlist_name
   submission = page.form.submit
   
   if !submission.at('.error').nil?
@@ -47,6 +48,7 @@ a.get(BRICKOWL_URL + 'wishlist/add') do |page|
 end
 
 # Get Wishlists
+wishlist_href = ""
 a.get(BRICKOWL_URL + 'wishlist') do |page|
     
   wishlists = page.at('tbody').element_children
@@ -55,9 +57,13 @@ a.get(BRICKOWL_URL + 'wishlist') do |page|
     
   wishlists.each_with_index do |wishlist, index|
     name = wishlist.element_children[0].text
+    if name == wishlist_name
+       wishlist_href = wishlist.element_children[0].at('a').attribute('href').value
+    end
     puts("#{index+1}: #{name}") 
   end
 end   
+puts("Wishlist href found: #{wishlist_href}")
 
 # Get a brick from query
 item = ask("Enter an item number:  ") { |q| q.echo = true }.to_i
@@ -107,10 +113,10 @@ a.get(BRICKOWL_URL + 'search/catalog?query=' + item.to_s) do |page|
 end
 
 # Add to wishlist
-a.get(queried_brick['href']) do |page|
+a.get(queried_brick['href'] + '#wishlist') do |page|
 
   PP.pp(page)
-
+  binding.pry
 end
 
 

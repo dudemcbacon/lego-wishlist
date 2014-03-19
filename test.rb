@@ -11,12 +11,22 @@ module LegoWishlist
     include Capybara::DSL
     
     def initialize
+      # Register new capybara driver to ignore SSL errors
+      Capybara.register_driver :webkit_ignore_ssl do |app|
+        browser = Capybara::Webkit::Browser.new(Capybara::Webkit::Connection.new).tap do |browser|
+          browser.ignore_ssl_errors
+        end
+        Capybara::Webkit::Driver.new(app, :browser => browser)
+      end
+
+      # Set up Capybara
       Capybara.run_server = false
-      Capybara.current_driver = :webkit
+      Capybara.current_driver = :webkit_ignore_ssl
       Capybara.app_host = "http://www.brickowl.com/"
 
       @logged_in = false 
    
+      # Start headless server for Capybara to run in 
       headless = Headless.new
       headless.start
     end
@@ -48,8 +58,15 @@ module LegoWishlist
         #Headless.ly do
           puts("Adding #{brick['name']} to #{wishlist['name']}")
           visit(brick['href'])
+          find('#tab-wishlist a').click
+          sleep(1)
+          all('#edit-color option').each do |option|
+            if option.text.include? brick['color']
+              puts option.text
+            end
+          end
           binding.pry
-        #end
+        #enkjd
       else
         puts("Must log in first.")
       end
@@ -63,6 +80,8 @@ password = ask("Enter password:  ") { |q| q.echo = "*" }
 brick = {}
 brick['name'] = "LEGO Tile 2 x 2 (undetermined type) with Decoration"
 brick['href'] = "/catalog/lego-tile-2-x-2-undetermined-type-with-decoration-123456"
+brick['qty'] = 5
+brick['color'] = "Black"
 
 wishlist = {}
 wishlist['name'] = "test123"

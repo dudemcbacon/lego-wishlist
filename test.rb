@@ -32,43 +32,60 @@ module LegoWishlist
     end
 
     def login(username, password)
-      #Headless.ly do
-        page.driver.header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0")
-        visit('user?destination=home')
-        if has_field? "name" and has_field? "pass"
-          fill_in("name", :with => username)
-          fill_in("pass", :with => password)
-          evaluate_script("jQuery('form').submit()")
+      page.driver.header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0")
+      visit('user?destination=home')
+      if has_field? "name" and has_field? "pass"
+        fill_in("name", :with => username)
+        fill_in("pass", :with => password)
+        evaluate_script("jQuery('form').submit()")
 
-          if !find('strong').text.eql? username
-            puts ("Something has gone wrong with the login!")
-            exit 1
-          end
-          
-          @logged_in = true
-        else
-          puts("Something has gone wrong. Has the website changed?")
+        if !find('strong').text.eql? username
+          puts ("Something has gone wrong with the login!")
           exit 1
         end
-      #end
+        
+        @logged_in = true
+        
+        return true
+      else
+        puts("Something has gone wrong. Has the website changed?")
+        return false
+      end
     end
     
     def add_to_wishlist(wishlist, brick)
       if @logged_in
-        #Headless.ly do
-          puts("Adding #{brick['name']} to #{wishlist['name']}")
-          visit(brick['href'])
-          find('#tab-wishlist a').click
-          sleep(1)
-          all('#edit-color option').each do |option|
-            if option.text.include? brick['color']
-              puts option.text
-            end
+        puts("Adding #{brick['name']} to #{wishlist['name']}")
+        
+        # Set up the wishlist form
+        visit(brick['href'])
+        find('#tab-wishlist a').click
+        sleep(1)
+        
+        # There's bound to be more than one color
+        colors = []
+        all('#edit-color option').each do |option|
+          if option.text.include? brick['color']
+            colors.push(option.text)
           end
-          binding.pry
-        #enkjd
+        end
+        
+        # Make the use choose
+        if colors.length > 1:
+          puts("Amgibuous color, select one:")
+          colors.each_with_index do |color|
+            puts("#{index+1}: #{color}")
+          end
+          
+          loop doc
+          selection = ask("Enter a number:  ") { |q| q.echo = true }
+          if selection.to_i != 0
+           puts("Invalid input. Defa") 
+        end
+        
       else
-        puts("Must log in first.")
+        puts("Must in first.")
+        return false
       end
     end
   end

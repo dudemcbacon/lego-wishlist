@@ -40,6 +40,40 @@ module LegoWishlist
       @driver.navigate.to("http://www.brickowl.com" + brick['href'])
       @driver.find_element(:css, "#tab-wishlist a").click
       sleep(1)
+
+      colors = []
+      @driver.find_elements(:css, "#edit-color > optgroup:nth-child(2) option").each do |option|
+        if option.text.include? brick['color']
+          colors.push(option.text)
+        end
+      end
+
+      if colors.length > 1
+        brick['color'] = choose_color(colors)
+      else
+        brick['color'] = colors[0]
+      end
+
+      puts "You chose #{brick['color']}"
+
+      @driver.find_elements(:css, "#edit-color > optgroup:nth-child(2) option").each do |option|
+        if option.text == brick['color']
+          option.click
+        end
+      end
+
+      binding.pry
+    end
+
+    def choose_color(colors)
+      loop do
+        HighLine.choose do |menu|
+          menu.prompt = "Choose a color:  "
+          colors.each do |color|
+            menu.choice(color.to_sym) {return color}
+          end
+        end
+      end
     end
   end
 end

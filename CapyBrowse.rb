@@ -10,18 +10,44 @@ module LegoWishlist
   class CapyBrowse
     include Capybara::DSL
     
-    def initialize
-      # Register new capybara driver to ignore SSL errors
-      Capybara.register_driver :webkit_ignore_ssl do |app|
-        browser = Capybara::Webkit::Browser.new(Capybara::Webkit::Connection.new).tap do |browser|
-          browser.ignore_ssl_errors
+    def choose_color(colors)
+      loop do
+        HighLine.choose do |menu|
+          menu.prompt = "Choose a color:  "
+          colors.each do |color|
+            menu.choice(color.to_sym) {return color}
+          end
         end
-        Capybara::Webkit::Driver.new(app, :browser => browser)
       end
+    end
+    
+    def initialize(ignore_ssl=false, debug=false)
+      # Implement a custom driver because we have a few options we need to pass to the browser.
+      Capybara.register_driver :webkit_custom do |app|
+        browser = Capybara::Webkit::Browser.new(Capybara::Webkit::Connection.new).tap do |browser|
+          # In case we also want to ignore SSL errors
+          if ignore_ssl == true
+            browser.ignore_ssl_errors
+          end
+          # Set up a blacklist for Google Analytics because it slows things down
+          blacklist = []
+          blacklist.push('http://www.google-analytics.com/ga.js')
+          blacklist.push('http://js.brickowl.com/files/js/js_3kpuFG9hplasnVNukLtlogTthC4yQ3rb-C3J9yFlU4c.js')
+          browser.url_blacklist = blacklist
+          # Skip loading images because we shouldn't need them.
+          browser.set_skip_image_loading(true)
+        end
+        driver = Capybara::Webkit::Driver.new(app, :browser => browser)
+        # In case we want debugging output.
+        if debug == true
+          driver.enable_logging
+        end
+        driver
+      end
+      Capybara.current_driver = :webkit
 
       # Set up Capybara
       Capybara.run_server = false
-      Capybara.current_driver = :webkit_ignore_ssl
       Capybara.app_host = "http://www.brickowl.com/"
 
       @logged_in = false 
@@ -33,7 +59,9 @@ module LegoWishlist
 
     def login(username, password)
       page.driver.header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:27.0) Gecko/20100101 Firefox/27.0")
+      binding.pry
       visit('user?destination=home')
+      puts('1')
       if has_field? "name" and has_field? "pass"
         fill_in("name", :with => username)
         fill_in("pass", :with => password)
@@ -43,7 +71,7 @@ module LegoWishlist
           puts ("Something has gone wrong with the login!")
           exit 1
         end
-        
+        puts('2') 
         @logged_in = true
         
         return true
@@ -56,12 +84,12 @@ module LegoWishlist
     def add_to_wishlist(wishlist, brick)
       if @logged_in
         puts("Adding #{brick['name']} to #{wishlist['name']}")
-        
+        puts('3') 
         # Set up the wishlist form
         visit(brick['href'])
         find('#tab-wishlist a').click
         sleep(1)
-        
+        puts('4') 
         # There's bound to be more than one color
         colors = []
         all('#edit-color option').each do |option|
@@ -69,20 +97,15 @@ module LegoWishlist
             colors.push(option.text)
           end
         end
-        
+        puts('5') 
         # Make the use choose
-        if colors.length > 1:
-          puts("Amgibuous color, select one:")
-          colors.each_with_index do |color|
-            puts("#{index+1}: #{color}")
-          end
-          
-          loop doc
-          selection = ask("Enter a number:  ") { |q| q.echo = true }
-          if selection.to_i != 0
-           puts("Invalid input. Defa") 
+        if colors.length > 1
+          brick['color'] = choose_color(colors)
+        else
+          brick['color'] = colors[0]
         end
         
+        binding.pry 
       else
         puts("Must in first.")
         return false
@@ -91,7 +114,7 @@ module LegoWishlist
   end
 end
 
-a = LegoWishlist::CapyBrowse.new
+a = LegoWishlist::CapyBrowse.new(ignore_ssl=true, debug=true)
 password = ask("Enter password:  ") { |q| q.echo = "*" }
 
 brick = {}
